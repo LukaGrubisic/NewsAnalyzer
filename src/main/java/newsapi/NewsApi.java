@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import newsapi.beans.NewsReponse;
 import newsapi.enums.*;
+import newsapi.exceptionModel.NewsApiException;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -104,7 +105,7 @@ public class NewsApi {
         this.endpoint = endpoint;
     }
 
-    protected String requestData() {
+    protected String requestData () throws IOException, NewsApiException{
         String url = buildURL();
         System.out.println("URL: "+url);
         URL obj = null;
@@ -116,25 +117,26 @@ public class NewsApi {
         }
         HttpURLConnection con;
         StringBuilder response = new StringBuilder();
-        try {
+
             con = (HttpURLConnection) obj.openConnection();
             BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
             String inputLine;
             while ((inputLine = in.readLine()) != null) {
                 response.append(inputLine);
             }
+
             in.close();
-        } catch (IOException e) {
-            // TOOO improve ErrorHandling
-            System.out.println("Error "+e.getMessage());
-        }
+
         return response.toString();
     }
 
-    protected String buildURL() {
+    protected String buildURL() throws NewsApiException {
         // TODO ErrorHandling
         String urlbase = String.format(NEWS_API_URL,getEndpoint().getValue(),getQ(),getApiKey());
         StringBuilder sb = new StringBuilder(urlbase);
+
+        if(getApiKey() == null || getQ() == null)
+            throw new NewsApiException("No Api key or Topic has been found");
 
         if(getFrom() != null){
             sb.append(DELIMITER).append("from=").append(getFrom());
@@ -172,7 +174,7 @@ public class NewsApi {
         return sb.toString();
     }
 
-    public NewsReponse getNews() {
+    public NewsReponse getNews() throws IOException, NewsApiException {
         NewsReponse newsReponse = null;
         String jsonResponse = requestData();
         if(jsonResponse != null && !jsonResponse.isEmpty()){
@@ -188,6 +190,9 @@ public class NewsApi {
             }
         }
         //TODO improve Errorhandling
+        if(jsonResponse == null){
+            throw new NewsApiException("No data from Server");
+        }
         return newsReponse;
     }
 }
